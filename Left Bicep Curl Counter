@@ -9,10 +9,13 @@ def calculate_angle(a,b,c):
     a = np.array(a)
     b = np.array(b)
     c = np.array(c)
+    
     radians = np.arctan2(c[1] - b[1], c[0] - b[0]) - np.arctan2(a[1] - b[1], a[0] - b[0])
     angle = np.abs(radians*180.0/np.pi)
+    
     if angle > 180.0:
-        angle = 360 - angle 
+        angle = 360 - angle
+        
     return angle
 
 cap = cv2.VideoCapture(0)
@@ -42,20 +45,27 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
             landmarks = results.pose_landmarks.landmark
             
             # Get Coordinates
-            shoulder = [landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].x, 
-                        landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].y]
-            elbow = [landmarks[mp_pose.PoseLandmark.LEFT_ELBOW.value].x,
-                     landmarks[mp_pose.PoseLandmark.LEFT_ELBOW.value].y]
-            wrist = [landmarks[mp_pose.PoseLandmark.LEFT_WRIST.value].x,
-                   landmarks[mp_pose.PoseLandmark.LEFT_WRIST.value].y]
+            shoulder = [landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].x, landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].y]
+            elbow = [landmarks[mp_pose.PoseLandmark.LEFT_ELBOW.value].x, landmarks[mp_pose.PoseLandmark.LEFT_ELBOW.value].y]
+            wrist = [landmarks[mp_pose.PoseLandmark.LEFT_WRIST.value].x, landmarks[mp_pose.PoseLandmark.LEFT_WRIST.value].y]
+            hip = [landmarks[mp_pose.PoseLandmark.LEFT_HIP.value].x, landmarks[mp_pose.PoseLandmark.LEFT_HIP.value].y]
             
             # Calculate Angle
             angle = calculate_angle(shoulder, elbow ,wrist)
             
+            # Angle that warns of wrong posture (if arm gets raised too much while curling could hurt shoulder)
+            warn_angle = calculate_angle(hip, shoulder, elbow)
+            
             # Visualize angle
-            cv2.putText(image, str(angle),
+            cv2.putText(image, str(angle)[:5],
                         tuple(np.multiply(elbow, [640, 480]).astype(int)),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 2, cv2.LINE_AA)
+            
+            # Warns for shoulder strain
+            if warn_angle > 20:
+                cv2.putText(image, str('DANGER'),
+                            tuple(np.multiply(shoulder, [640, 480]).astype(int)),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255), 2, cv2.LINE_AA)
             
             # Curl Counter Logic
             if angle > 160:
